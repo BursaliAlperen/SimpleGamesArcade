@@ -4,9 +4,13 @@ import { playSfx } from '../../audio';
 // Game constants
 const GRID_SIZE = 4;
 
-// Tile type for type safety
-type Tile = number; // 0 represents an empty cell
-type Grid = Tile[][];
+// NEW Tile type
+interface Tile {
+  id: string;
+  value: number;
+}
+// Grid now holds Tile objects or 0 for empty cells
+type Grid = (Tile | 0)[][];
 
 // Helper functions
 const createEmptyGrid = (): Grid => Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(0));
@@ -28,7 +32,9 @@ const addRandomTile = (grid: Grid): Grid => {
   const newGrid = grid.map(row => [...row]);
   const cell = getRandomEmptyCell(newGrid);
   if (cell) {
-    newGrid[cell.y][cell.x] = Math.random() < 0.9 ? 2 : 4;
+    const value = Math.random() < 0.9 ? 2 : 4;
+    // Note: crypto.randomUUID() is available in secure contexts (HTTPS) in modern browsers.
+    newGrid[cell.y][cell.x] = { id: crypto.randomUUID(), value };
   }
   return newGrid;
 };
@@ -62,12 +68,12 @@ const move = (grid: Grid, direction: 'up' | 'down' | 'left' | 'right'): { newGri
     // Move left logic
     for (let y = 0; y < GRID_SIZE; y++) {
         const originalRow = JSON.stringify(newGrid[y]);
-        let row = newGrid[y].filter(tile => tile !== 0);
-        let newRow: Tile[] = [];
+        let row = newGrid[y].filter(tile => tile !== 0) as Tile[];
+        let newRow: (Tile | 0)[] = [];
         for (let i = 0; i < row.length; i++) {
-            if (i + 1 < row.length && row[i] === row[i + 1]) {
-                const newValue = row[i] * 2;
-                newRow.push(newValue);
+            if (i + 1 < row.length && row[i].value === row[i + 1].value) {
+                const newValue = row[i].value * 2;
+                newRow.push({ id: crypto.randomUUID(), value: newValue });
                 scoreGained += newValue;
                 i++; // Skip next tile as it's merged
             } else {
@@ -105,9 +111,15 @@ const isGameOver = (grid: Grid): boolean => {
     // Check for possible merges
     for (let y = 0; y < GRID_SIZE; y++) {
         for (let x = 0; x < GRID_SIZE; x++) {
-            const current = grid[y][x];
-            if (y < GRID_SIZE - 1 && grid[y + 1][x] === current) return false;
-            if (x < GRID_SIZE - 1 && grid[y][x + 1] === current) return false;
+            const current = grid[y][x] as Tile; // at this point we know there are no 0s
+            if (y < GRID_SIZE - 1) {
+                const down = grid[y + 1][x] as Tile;
+                if (down.value === current.value) return false;
+            }
+            if (x < GRID_SIZE - 1) {
+                const right = grid[y][x + 1] as Tile;
+                if (right.value === current.value) return false;
+            }
         }
     }
     return true;
@@ -180,11 +192,15 @@ const Game2048: React.FC<{ onGameOver: (score: number) => void }> = ({ onGameOve
             </div>
             <div className="bg-gray-900/50 rounded-md p-2 flex-grow grid grid-cols-4 grid-rows-4 gap-2">
                 {grid.map((row, y) => 
-                    row.map((tile: Tile, x: number) => (
-                        <div key={`${y}-${x}`} className={`w-full h-full rounded-md flex items-center justify-center font-bold text-xl md:text-3xl transition-all duration-100 ${getTileColor(tile)}`}>
-                            {tile > 0 ? tile : ''}
-                        </div>
-                    ))
+                    row.map((tile, x) => {
+                        const tileValue = tile ? tile.value : 0;
+                        const tileId = tile ? tile.id : `${y}-${x}`; // Use tile.id for React key when available
+                        return (
+                            <div key={tileId} className={`w-full h-full rounded-md flex items-center justify-center font-bold text-xl md:text-3xl transition-all duration-100 ${getTileColor(tileValue)}`}>
+                                {tileValue > 0 ? tileValue : ''}
+                            </div>
+                        )
+                    })
                 )}
             </div>
         </div>
