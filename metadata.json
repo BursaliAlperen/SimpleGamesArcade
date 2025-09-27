@@ -1,0 +1,5 @@
+{
+  "name": "Simple Arcade Games Platform",
+  "description": "A web-based arcade platform featuring classic games with a modern twist. Users can play games, earn points, and simulate converting their scores into Toncoin.",
+  "requestFramePermissions": []
+}
