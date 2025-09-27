@@ -168,7 +168,7 @@ const Game2048: React.FC<{ onGameOver: (score: number) => void }> = ({ onGameOve
             </div>
             <div className="bg-gray-900/50 rounded-md p-2 flex-grow grid grid-cols-4 grid-rows-4 gap-2">
                 {grid.map((row, y) => 
-                    row.map((tile, x) => (
+                    row.map((tile: Tile, x: number) => (
                         <div key={`${y}-${x}`} className={`w-full h-full rounded-md flex items-center justify-center font-bold text-xl md:text-3xl transition-all duration-100 ${getTileColor(tile)}`}>
                             {tile > 0 ? tile : ''}
                         </div>
