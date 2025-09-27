@@ -88,32 +88,30 @@ const SnakeGame: React.FC<{ onGameOver: (score: number) => void }> = ({ onGameOv
   
   return (
     <div className="relative w-full h-full bg-gray-800 border-2 border-cyan-800">
-      <div style={{ position: 'relative', width: '100%', height: '100%'}}>
-        {snake.map((segment, index) => (
-          <div
-            key={index}
-            className="absolute rounded-sm"
-            style={{ 
-              left: `${segment.x * TILE_SIZE}%`, 
-              top: `${segment.y * TILE_SIZE}%`, 
-              width: `${TILE_SIZE}%`, 
-              height: `${TILE_SIZE}%`,
-              backgroundColor: index === 0 ? '#4ade80' : '#34d399'
-            }}
-          />
-        ))}
+      {snake.map((segment, index) => (
         <div
-          className="absolute rounded-full"
-          style={{
-            left: `${food.x * TILE_SIZE}%`,
-            top: `${food.y * TILE_SIZE}%`,
-            width: `${TILE_SIZE}%`,
+          key={index}
+          className="absolute rounded-sm"
+          style={{ 
+            left: `${segment.x * TILE_SIZE}%`, 
+            top: `${segment.y * TILE_SIZE}%`, 
+            width: `${TILE_SIZE}%`, 
             height: `${TILE_SIZE}%`,
-            backgroundColor: '#f87171',
-            boxShadow: '0 0 10px #f87171'
+            backgroundColor: index === 0 ? '#4ade80' : '#34d399'
           }}
         />
-      </div>
+      ))}
+      <div
+        className="absolute rounded-full"
+        style={{
+          left: `${food.x * TILE_SIZE}%`,
+          top: `${food.y * TILE_SIZE}%`,
+          width: `${TILE_SIZE}%`,
+          height: `${TILE_SIZE}%`,
+          backgroundColor: '#f87171',
+          boxShadow: '0 0 10px #f87171'
+        }}
+      />
       <div className="absolute top-2 right-2 text-white font-press-start bg-black/50 px-2 py-1 rounded">
         SCORE: {score}
       </div>

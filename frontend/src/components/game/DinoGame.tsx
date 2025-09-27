@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { playSfx } from '../../audio';
 
 const GAME_WIDTH = 100;
-const GAME_HEIGHT = 100;
 
 const DINO_WIDTH = 5;
 const DINO_HEIGHT = 7;
@@ -129,12 +128,10 @@ const DinoGame: React.FC<{ onGameOver: (score: number) => void }> = ({ onGameOve
 
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('touchstart', handleTouchStart);
-    window.addEventListener('click', handleJump);
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('touchstart', handleTouchStart);
-      window.removeEventListener('click', handleJump);
     };
   }, [handleJump]);
   
@@ -150,7 +147,10 @@ const DinoGame: React.FC<{ onGameOver: (score: number) => void }> = ({ onGameOve
   }, [gameLoop, isGameOver]);
 
   return (
-    <div className="relative w-full h-full bg-gray-800 border-2 border-cyan-800 overflow-hidden">
+    <div 
+        className="relative w-full h-full bg-gray-800 border-2 border-cyan-800 overflow-hidden"
+        onClick={handleJump}
+    >
         <div className="absolute bottom-0 left-0 w-full bg-gray-600" style={{ height: `${DINO_INITIAL_Y}%`}} />
         <div className="absolute bg-green-400" style={{ left: `${GAME_WIDTH / 4}%`, bottom: `${dinoY}%`, width: `${DINO_WIDTH}%`, height: `${DINO_HEIGHT}%`, borderRadius: '4px 4px 0 0' }} />
         {obstacles.map(obs => (
