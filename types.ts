@@ -1,4 +1,3 @@
-
 export interface User {
   telegramId: string;
   username: string;
@@ -10,6 +9,7 @@ export interface Game {
   id: string;
   name: string;
   description: string;
+  instructions: string;
   component: React.ComponentType<{ onGameOver: (score: number) => void }>;
   icon: React.ReactNode;
   targetScore: number;
