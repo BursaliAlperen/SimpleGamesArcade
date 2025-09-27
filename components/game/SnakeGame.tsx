@@ -1,5 +1,7 @@
 
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { playSfx } from '../../audio';
 
 const GRID_SIZE = 20;
 const TILE_SIZE = 100 / GRID_SIZE; // Percentage
@@ -36,6 +38,7 @@ const SnakeGame: React.FC<{ onGameOver: (score: number) => void }> = ({ onGameOv
       
       // Wall collision
       if (head.x < 0 || head.x >= GRID_SIZE || head.y < 0 || head.y >= GRID_SIZE) {
+        playSfx('collision');
         setIsGameOver(true);
         return prevSnake;
       }
@@ -43,6 +46,7 @@ const SnakeGame: React.FC<{ onGameOver: (score: number) => void }> = ({ onGameOv
       // Self collision
       for (const segment of newSnake) {
           if (segment.x === head.x && segment.y === head.y) {
+              playSfx('collision');
               setIsGameOver(true);
               return prevSnake;
           }
@@ -52,6 +56,7 @@ const SnakeGame: React.FC<{ onGameOver: (score: number) => void }> = ({ onGameOv
       
       // Food consumption
       if (head.x === food.x && head.y === food.y) {
+        playSfx('snake-eat');
         setScore(s => s + 1);
         setFood(getRandomPosition());
         setSpeed(s => Math.max(50, s * 0.95)); // Increase speed

@@ -8,6 +8,7 @@ import Bank from './components/Bank';
 import Header from './components/Header';
 import GameContainer from './components/game/GameContainer';
 import { GAMES } from './components/game/GameList';
+import BonusScreen from './components/BonusScreen';
 
 // A type for the Telegram Web App user object
 interface TelegramUser {
@@ -52,6 +53,38 @@ const App: React.FC = () => {
   const [lastGameScore, setLastGameScore] = useState<{ score: number; coins: number } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // New states for Daily Bonus
+  const [bonusStatus, setBonusStatus] = useState<{ available: boolean; nextBonusTime: number | null }>({ available: false, nextBonusTime: null });
+  const [isClaimingBonus, setIsClaimingBonus] = useState(false);
+  const [bonusClaimSuccess, setBonusClaimSuccess] = useState(false);
+  const BONUS_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+  const BONUS_AMOUNT = 1000;
+
+  // Function to check bonus status
+  const checkBonusStatus = useCallback(() => {
+    // This logic would typically be on the backend.
+    // We'll use localStorage to simulate it for this demo.
+    if (!user) return;
+    const lastClaimTime = localStorage.getItem(`lastBonusClaim_${user.telegramId}`);
+    if (!lastClaimTime) {
+      setBonusStatus({ available: true, nextBonusTime: null });
+    } else {
+      const nextAvailableTime = parseInt(lastClaimTime, 10) + BONUS_DURATION;
+      if (Date.now() >= nextAvailableTime) {
+        setBonusStatus({ available: true, nextBonusTime: null });
+      } else {
+        setBonusStatus({ available: false, nextBonusTime: nextAvailableTime });
+      }
+    }
+  }, [user, BONUS_DURATION]);
+  
+  // useEffect to check bonus status when user is available
+  useEffect(() => {
+    if (user) {
+      checkBonusStatus();
+    }
+  }, [user, checkBonusStatus]);
 
   const performLogin = useCallback(async (authData: TelegramAuthData) => {
     setIsLoading(true);
@@ -127,6 +160,45 @@ const App: React.FC = () => {
 
   }, [performLogin]);
 
+  const handleClaimBonus = useCallback(async () => {
+    if (!user || !bonusStatus.available) return;
+
+    setIsClaimingBonus(true);
+    // Simulate API call
+    try {
+      // Fake delay for user feedback
+      await new Promise(res => setTimeout(res, 1000));
+      
+      // On success, update user state
+      const newScore = user.score + BONUS_AMOUNT;
+      const coinsFromBonus = BONUS_AMOUNT * TONCOIN_RATE;
+      const newCoins = user.coins + coinsFromBonus;
+      
+      setUser({ ...user, score: newScore, coins: newCoins });
+      
+      // Simulate backend call to update score
+      // In a real app, you'd want to handle the response from this
+       fetch('/api/users/updateScore', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ telegramId: user.telegramId, newScore, newCoins })
+      }).catch(err => console.error("Failed to sync bonus score with server", err));
+
+      // Update bonus status locally
+      localStorage.setItem(`lastBonusClaim_${user.telegramId}`, Date.now().toString());
+      checkBonusStatus();
+      setBonusClaimSuccess(true);
+      // Reset success state after a few seconds to allow re-entry to the screen
+      setTimeout(() => setBonusClaimSuccess(false), 4000);
+
+    } catch (err) {
+      console.error("Failed to claim bonus", err);
+      // Handle error case, maybe show a message
+    } finally {
+      setIsClaimingBonus(false);
+    }
+  }, [user, bonusStatus.available, checkBonusStatus, BONUS_AMOUNT]);
+
   const handleRedirectToTelegram = useCallback(() => {
     const BOT_ID = '7993948970';
     const ORIGIN = 'https://simplegamesarcade.onrender.com';
@@ -139,8 +211,12 @@ const App: React.FC = () => {
   }, []);
 
   const handleNavigation = useCallback((screen: Screen) => {
+    // Reset bonus success state when navigating away from the bonus screen
+    if (currentScreen === Screen.Bonus && screen !== Screen.Bonus) {
+      setBonusClaimSuccess(false);
+    }
     setCurrentScreen(screen);
-  }, []);
+  }, [currentScreen]);
   
   const handleSelectGame = useCallback((gameId: string) => {
     const game = GAMES.find(g => g.id === gameId);
@@ -223,11 +299,22 @@ const App: React.FC = () => {
       case Screen.Login:
         return <LoginScreen onLogin={handleRedirectToTelegram} isLoading={isLoading} />;
       case Screen.MainMenu:
-        return <MainMenu onNavigate={handleNavigation} />;
+        return <MainMenu onNavigate={handleNavigation} isBonusAvailable={bonusStatus.available} />;
       case Screen.GameMenu:
         return <GameMenu games={GAMES} onSelectGame={handleSelectGame} onBack={() => handleNavigation(Screen.MainMenu)} />;
       case Screen.Bank:
         return <Bank user={user} onWithdraw={handleWithdraw} onBack={() => handleNavigation(Screen.MainMenu)} />;
+      case Screen.Bonus:
+        return (
+          <BonusScreen
+            isAvailable={bonusStatus.available}
+            nextBonusTime={bonusStatus.nextBonusTime}
+            onClaim={handleClaimBonus}
+            onBack={() => handleNavigation(Screen.MainMenu)}
+            isLoading={isClaimingBonus}
+            claimSuccess={bonusClaimSuccess}
+          />
+        );
       case Screen.Playing:
         if (activeGame) {
           return <GameContainer game={activeGame} onGameOver={handleGameOver} onExit={handleExitGame} lastGameScore={lastGameScore} />;

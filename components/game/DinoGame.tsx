@@ -101,6 +101,7 @@ const DinoGame: React.FC<{ onGameOver: (score: number) => void }> = ({ onGameOve
     });
 
     if (collisionDetected) {
+      playSfx('collision');
       setIsGameOver(true);
       onGameOver(Math.floor(score));
       return;

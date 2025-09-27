@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { playSfx } from '../../audio';
 
 // Game constants
 const GRID_SIZE = 4;
@@ -130,6 +131,9 @@ const Game2048: React.FC<{ onGameOver: (score: number) => void }> = ({ onGameOve
         const { newGrid, scoreGained, moved } = move(grid, direction);
 
         if (moved) {
+            if (scoreGained > 0) {
+                playSfx('tile-merge');
+            }
             const gridWithNewTile = addRandomTile(newGrid);
             setGrid(gridWithNewTile);
             const newScore = score + scoreGained;

@@ -21,4 +21,5 @@ export enum Screen {
   GameMenu,
   Bank,
   Playing,
+  Bonus,
 }
