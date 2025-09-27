@@ -10,18 +10,32 @@ import GameContainer from './components/game/GameContainer';
 import { GAMES } from './components/game/GameList';
 import BonusScreen from './components/BonusScreen';
 
+// A type for the Telegram Web App user object
+interface TelegramUser {
+  id: number;
+  first_name: string;
+  last_name?: string;
+  username?: string;
+}
+
 // A simplified type for the Telegram Web App object
 interface TelegramWebApp {
   initData: string;
   initDataUnsafe?: {
-    user?: {
-      id: number;
-      first_name: string;
-      last_name?: string;
-      username?: string;
-    };
+    user?: TelegramUser;
   };
   ready: () => void;
+}
+
+// Data to be sent to the backend for authentication
+interface TelegramAuthData {
+  telegramId: string | number;
+  username?: string;
+  firstName: string;
+  lastName?: string;
+  // This can be the full initData string from WebApp,
+  // or the 'hash' parameter from the OAuth callback.
+  validationData?: string;
 }
 
 declare global {
@@ -67,14 +81,14 @@ const App: React.FC = () => {
     }
   }, [user, checkBonusStatus]);
 
-  const performLogin = useCallback(async (authData: URLSearchParams) => {
+  const performLogin = useCallback(async (authData: TelegramAuthData) => {
     setIsLoading(true);
     setError(null);
     try {
         const response = await fetch('/api/auth/telegram', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(Object.fromEntries(authData))
+            body: JSON.stringify(authData)
         });
         if (!response.ok) {
             const errorData = await response.json();
@@ -92,28 +106,36 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('id') && params.get('hash')) {
-      performLogin(params);
-      // Clean the URL
+    const oauthHash = params.get('hash');
+    const oauthId = params.get('id');
+    const oauthFirstName = params.get('first_name');
+
+    if (oauthHash && oauthId && oauthFirstName) {
+      performLogin({
+          telegramId: oauthId,
+          validationData: oauthHash,
+          username: params.get('username') || undefined,
+          firstName: oauthFirstName,
+          lastName: params.get('last_name') || undefined,
+      });
       window.history.replaceState({}, document.title, window.location.pathname);
       return;
     }
 
     const telegram = window.Telegram?.WebApp;
-    if (telegram && telegram.initData && telegram.initDataUnsafe?.user) {
-        telegram.ready();
-        // For WebApp, we create search params that look like the OAuth response for our backend
-        const webAppParams = new URLSearchParams();
-        const tgUser = telegram.initDataUnsafe.user;
-        webAppParams.set('id', tgUser.id.toString());
-        webAppParams.set('first_name', tgUser.first_name);
-        if(tgUser.last_name) webAppParams.set('last_name', tgUser.last_name);
-        if(tgUser.username) webAppParams.set('username', tgUser.username);
-        // Note: WebApp initData validation is different from OAuth hash validation.
-        // Our simple backend currently doesn't distinguish. For production, this would need refinement.
-        webAppParams.set('hash', 'webapp_hash_placeholder'); // Backend needs a hash to proceed
-        performLogin(webAppParams);
+    if (telegram && telegram.initData) {
+      telegram.ready();
+      const tgUser = telegram.initDataUnsafe?.user;
+      if (tgUser) {
+        performLogin({
+            telegramId: tgUser.id,
+            validationData: telegram.initData,
+            username: tgUser.username,
+            firstName: tgUser.first_name,
+            lastName: tgUser.last_name,
+        });
         return;
+      }
     }
     
     setIsLoading(false);
@@ -151,7 +173,7 @@ const App: React.FC = () => {
 
   const handleRedirectToTelegram = useCallback(() => {
     setIsLoading(true); 
-    const TELEGRAM_BOT_ID = '7993948970';
+    const TELEGRAM_BOT_ID = '7993948970'; // From prompt
     const origin = window.location.origin;
     const oauthUrl = `https://oauth.telegram.org/auth?bot_id=${TELEGRAM_BOT_ID}&origin=${encodeURIComponent(origin)}&request_access=write`;
     window.location.href = oauthUrl;
@@ -189,7 +211,6 @@ const App: React.FC = () => {
         });
         if (!response.ok) {
           console.error('Failed to update score on server.');
-          // Optionally show an error to the user
         } else {
           const updatedUser = await response.json();
           setUser(updatedUser);

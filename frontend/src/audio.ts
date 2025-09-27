@@ -1,4 +1,3 @@
-
 // This file uses the Web Audio API to generate simple sounds programmatically.
 // This avoids the need for external audio files.
 

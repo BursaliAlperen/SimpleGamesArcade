@@ -1,4 +1,3 @@
-// FIX: Import React to provide types for React.ComponentType and React.ReactNode
 import React from 'react';
 
 export interface User {

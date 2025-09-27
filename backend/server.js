@@ -2,13 +2,12 @@ import express from "express";
 import path from "path";
 import cors from "cors";
 import mongoose from "mongoose";
-import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 
 // --- Environment Variables ---
 const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/arcade_platform";
 const PORT = process.env.PORT || 5000;
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+// const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN; // For full validation in production
 
 // --- Express App Setup ---
 const app = express();
@@ -27,31 +26,40 @@ const userSchema = new mongoose.Schema({
   lastName: String,
   score: { type: Number, default: 0 },
   coins: { type: Number, default: 0 },
-});
+  lastLogin: { type: Date, default: Date.now },
+}, { timestamps: { createdAt: 'createdAt', updatedAt: false } });
 
 const User = mongoose.model('User', userSchema);
 
 // --- API Endpoints ---
 app.post("/api/auth/telegram", async (req, res) => {
-    // The authData body should be the result of new URLSearchParams(window.location.search)
-    const authData = req.body;
+    const { telegramId, username, firstName, lastName } = req.body;
+
+    if (!telegramId) {
+        return res.status(400).json({ message: "Missing Telegram User ID." });
+    }
     
-    // NOTE: In a real production environment, you would need to implement full hash validation
-    // using the TELEGRAM_BOT_TOKEN to ensure the request is legitimate.
+    // NOTE: In a real production environment, you would implement full hash validation
+    // using the TELEGRAM_BOT_TOKEN to ensure the request is legitimate and from Telegram.
     
     try {
-        let user = await User.findOne({ telegramId: authData.id });
+        let user = await User.findOne({ telegramId: telegramId });
+
         if (!user) {
             user = new User({
-                telegramId: authData.id,
-                username: authData.username || `${authData.first_name} ${authData.last_name || ''}`.trim(),
-                firstName: authData.first_name,
-                lastName: authData.last_name || '',
-                score: 0,
-                coins: 0,
+                telegramId,
+                username: username || `${firstName} ${lastName || ''}`.trim(),
+                firstName,
+                lastName: lastName || '',
             });
-            await user.save();
+        } else {
+            user.username = username || `${firstName} ${lastName || ''}`.trim();
+            user.firstName = firstName;
+            user.lastName = lastName || '';
+            user.lastLogin = new Date();
         }
+        await user.save();
+        
         res.json({
             telegramId: user.telegramId,
             username: user.username,
@@ -72,7 +80,7 @@ app.post("/api/users/updateScore", async (req, res) => {
     try {
         const user = await User.findOneAndUpdate(
             { telegramId },
-            { score: newScore, coins: newCoins },
+            { $set: { score: newScore, coins: newCoins } },
             { new: true, upsert: false }
         );
         if (!user) {

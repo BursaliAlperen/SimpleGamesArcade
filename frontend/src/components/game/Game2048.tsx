@@ -1,11 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { playSfx } from '../../audio';
 
+// Game constants
 const GRID_SIZE = 4;
 
-type Tile = number;
-type Grid = Tile[][];
+// NEW Tile type
+interface Tile {
+  id: string;
+  value: number;
+}
+// Grid now holds Tile objects or 0 for empty cells
+type Grid = (Tile | 0)[][];
 
+// Helper functions
 const createEmptyGrid = (): Grid => Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(0));
 
 const getRandomEmptyCell = (grid: Grid): { x: number; y: number } | null => {
@@ -25,12 +32,13 @@ const addRandomTile = (grid: Grid): Grid => {
   const newGrid = grid.map(row => [...row]);
   const cell = getRandomEmptyCell(newGrid);
   if (cell) {
-    // FIX: Corrected a typo where `x` was used instead of `cell.x`. The `cell` object contains the coordinates of the empty cell.
-    newGrid[cell.y][cell.x] = Math.random() < 0.9 ? 2 : 4;
+    const value = Math.random() < 0.9 ? 2 : 4;
+    newGrid[cell.y][cell.x] = { id: crypto.randomUUID(), value };
   }
   return newGrid;
 };
 
+// Game logic for moving and merging tiles
 const move = (grid: Grid, direction: 'up' | 'down' | 'left' | 'right'): { newGrid: Grid; scoreGained: number; moved: boolean } => {
     let newGrid = JSON.parse(JSON.stringify(grid));
     let scoreGained = 0;
@@ -57,14 +65,14 @@ const move = (grid: Grid, direction: 'up' | 'down' | 'left' | 'right'): { newGri
 
     for (let y = 0; y < GRID_SIZE; y++) {
         const originalRow = JSON.stringify(newGrid[y]);
-        let row = newGrid[y].filter(tile => tile !== 0);
-        let newRow: Tile[] = [];
+        let row = newGrid[y].filter(tile => tile !== 0) as Tile[];
+        let newRow: (Tile | 0)[] = [];
         for (let i = 0; i < row.length; i++) {
-            if (i + 1 < row.length && row[i] === row[i + 1]) {
-                const newValue = row[i] * 2;
-                newRow.push(newValue);
+            if (i + 1 < row.length && row[i].value === row[i + 1].value) {
+                const newValue = row[i].value * 2;
+                newRow.push({ id: crypto.randomUUID(), value: newValue });
                 scoreGained += newValue;
-                i++;
+                i++; // Skip next tile as it's merged
             } else {
                 newRow.push(row[i]);
             }
@@ -96,14 +104,21 @@ const isGameOver = (grid: Grid): boolean => {
     }
     for (let y = 0; y < GRID_SIZE; y++) {
         for (let x = 0; x < GRID_SIZE; x++) {
-            const current = grid[y][x];
-            if (y < GRID_SIZE - 1 && grid[y + 1][x] === current) return false;
-            if (x < GRID_SIZE - 1 && grid[y][x + 1] === current) return false;
+            const current = grid[y][x] as Tile;
+            if (y < GRID_SIZE - 1) {
+                const down = grid[y + 1][x] as Tile;
+                if (down && down.value === current.value) return false;
+            }
+            if (x < GRID_SIZE - 1) {
+                const right = grid[y][x + 1] as Tile;
+                if (right && right.value === current.value) return false;
+            }
         }
     }
     return true;
 };
 
+// Component
 const Game2048: React.FC<{ onGameOver: (score: number) => void }> = ({ onGameOver }) => {
     const [grid, setGrid] = useState<Grid>(addRandomTile(addRandomTile(createEmptyGrid())));
     const [score, setScore] = useState(0);
@@ -169,11 +184,15 @@ const Game2048: React.FC<{ onGameOver: (score: number) => void }> = ({ onGameOve
             </div>
             <div className="bg-gray-900/50 rounded-md p-2 flex-grow grid grid-cols-4 grid-rows-4 gap-2">
                 {grid.map((row, y) => 
-                    row.map((tile: Tile, x: number) => (
-                        <div key={`${y}-${x}`} className={`w-full h-full rounded-md flex items-center justify-center font-bold text-xl md:text-3xl transition-all duration-100 ${getTileColor(tile)}`}>
-                            {tile > 0 ? tile : ''}
-                        </div>
-                    ))
+                    row.map((tile, x) => {
+                        const tileValue = tile ? tile.value : 0;
+                        const tileId = tile ? tile.id : `${y}-${x}`;
+                        return (
+                            <div key={tileId} className={`w-full h-full rounded-md flex items-center justify-center font-bold text-xl md:text-3xl transition-all duration-100 ${getTileColor(tileValue)}`}>
+                                {tileValue > 0 ? tileValue : ''}
+                            </div>
+                        )
+                    })
                 )}
             </div>
         </div>

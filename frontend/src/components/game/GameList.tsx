@@ -1,7 +1,11 @@
+import React from 'react';
 import { Game } from '../../types';
 import SnakeGame from './SnakeGame';
 import DinoGame from './DinoGame';
 import Game2048 from './Game2048';
+import FlappyBirdGame from './FlappyBirdGame';
+import TetroTilesGame from './TetroTilesGame';
+import PongGame from './PongGame';
 
 export const GAMES: Game[] = [
   {
@@ -30,5 +34,32 @@ export const GAMES: Game[] = [
     component: Game2048,
     icon: <span>🔢</span>,
     targetScore: 2048,
+  },
+  {
+    id: 'flappy',
+    name: 'Flappy Bird',
+    description: 'Flap your way through the pipes.',
+    instructions: 'Tap or press Space to flap. Avoid the pipes.',
+    component: FlappyBirdGame,
+    icon: <span>🐦</span>,
+    targetScore: 50,
+  },
+  {
+    id: 'tetro-tiles',
+    name: 'Tetro Tiles',
+    description: 'Fit the falling blocks to clear lines.',
+    instructions: 'Use arrow keys to move and rotate the blocks. Clear lines to score points.',
+    component: TetroTilesGame,
+    icon: <span>🧱</span>,
+    targetScore: 10000,
+  },
+  {
+    id: 'pong',
+    name: 'Pong',
+    description: 'The classic two-player paddle game.',
+    instructions: 'Move your paddle to hit the ball back. First to 10 points wins.',
+    component: PongGame,
+    icon: <span>🏓</span>,
+    targetScore: 10,
   },
 ];
