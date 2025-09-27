@@ -25,6 +25,7 @@ const addRandomTile = (grid: Grid): Grid => {
   const newGrid = grid.map(row => [...row]);
   const cell = getRandomEmptyCell(newGrid);
   if (cell) {
+    // FIX: Corrected a typo where `x` was used instead of `cell.x`. The `cell` object contains the coordinates of the empty cell.
     newGrid[cell.y][cell.x] = Math.random() < 0.9 ? 2 : 4;
   }
   return newGrid;
